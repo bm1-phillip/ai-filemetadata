@@ -47,17 +47,23 @@ class FalAdapter
             ->withSearchTerm(' ')
             ->withRecursive();
 
-        if ($limit !== null) {
-            $fileSearch->withMaxResults($limit);
-        }
+        // if ($limit !== null) {
+        //     $fileSearch = $fileSearch->withMaxResults($limit);
+        // }
 
         $files = $folder->searchFiles($fileSearch);
+
+        $processedCount = 0;
 
         $progress = new ProgressBar($output);
         $progress->setFormat('with_message');
         $progress->setMessage('');
         $progress->setRedrawFrequency(25);
         foreach ($progress->iterate($files) as $file) {
+            if ($limit !== null && $processedCount >= $limit) {
+                break;
+            }
+
             if (!in_array($file->getExtension(), ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
                 continue;
             }
@@ -66,8 +72,39 @@ class FalAdapter
                 continue;
             }
 
+            // Check if file actually needs localization (no existing alt-text in default language, or translations missing, or overwrite enabled)
+            $needsLocalization = false;
+            $originalMetadata = $file->getMetaData()->get();
+            $existingAlternative = trim($originalMetadata['alternative'] ?? '');
+            if ($overwriteMetadata || $existingAlternative === '') {
+                $needsLocalization = true;
+            } else {
+                // Check for missing translations in other languages
+                $falLanguages = $this->getLanguageMappingForFile($file);
+                foreach ($falLanguages as $sysLanguageUid => $locale) {
+                    if ($sysLanguageUid === 0) {
+                        continue;
+                    }
+                    $translatedRecords = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecordLocalization(
+                        'sys_file_metadata',
+                        $originalMetadata['uid'],
+                        $sysLanguageUid
+                    );
+                    $translatedAlternative = trim($translatedRecords[0]['alternative'] ?? '');
+                    if ($overwriteMetadata || $translatedAlternative === '') {
+                        $needsLocalization = true;
+                        break;
+                    }
+                }
+            }
+            if (!$needsLocalization) {
+                // No changes needed, skip counting and processing
+                continue;
+            }
+
             $progress->setMessage($file->getIdentifier());
             $this->localizeFile($file, $overwriteMetadata);
+            $processedCount++;
         }
     }
 
