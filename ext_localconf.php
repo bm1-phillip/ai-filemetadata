@@ -9,3 +9,4 @@ call_user_func(static function () {
         'class' => AiGeneratedAltTextElement::class,
     ];
 });
+

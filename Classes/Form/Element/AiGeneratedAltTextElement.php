@@ -26,6 +26,9 @@ class AiGeneratedAltTextElement extends InputTextElement
         $resultArray['labelHasBeenHandled'] = true;
         $config = $parameterArray['fieldConf']['config'];
 
+        // Stay compatible with both TYPO3 12 and 13 (fixes #16)
+        $iconFactory = property_exists($this, 'iconFactory') ? $this->iconFactory : GeneralUtility::makeInstance(IconFactory::class);
+
         $languageId = 0;
         if (isset($GLOBALS['TCA'][$table]['ctrl']['languageField']) && !empty($GLOBALS['TCA'][$table]['ctrl']['languageField'])) {
             $languageField = $GLOBALS['TCA'][$table]['ctrl']['languageField'];
@@ -181,7 +184,6 @@ class AiGeneratedAltTextElement extends InputTextElement
         $mainFieldHtml[] =          '<div class="input-group">';
         $mainFieldHtml[] =              '<textarea ' . GeneralUtility::implodeAttributes($attributes, true) . '></textarea>';
         $mainFieldHtml[] =              '<button class="btn btn-default t3js-form-field-alt-text-recreate" type="button" title="' . htmlspecialchars($recreateButtonTitle) . '">';
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $mainFieldHtml[] =                  $iconFactory->getIcon('actions-ai-generate', Icon::SIZE_SMALL)->render();
         $mainFieldHtml[] =              '</button>';
         $mainFieldHtml[] =          '</div>';
